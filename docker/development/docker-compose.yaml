@@ -1,0 +1,22 @@
+services:
+  excalimat-backend-live-reload:
+    image: cosmtrek/air
+    # working_dir value has to be the same of mapped volume
+    working_dir: /live-reload/
+    ports:
+      - 3000:3000
+    env_file:
+      - .env-dev
+    tty: true
+    volumes:
+      - ../../:/live-reload/
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env-dev
