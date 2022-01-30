@@ -3,9 +3,9 @@ package database
 import (
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 
+	"github.com/keyruu/excalimat-backend/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -16,7 +16,7 @@ var DB *gorm.DB
 // ConnectDB connect to db
 func Connect() {
 	var err error
-	p := os.Getenv("DB_PORT")
+	p := config.Config("DB_PORT")
 	port, err := strconv.ParseUint(p, 10, 32)
 
 	if err != nil {
@@ -25,7 +25,7 @@ func Connect() {
 
 	// Connection URL to connect to Postgres Database
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"), port, os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
+		config.Config("DB_HOST"), port, config.Config("DB_USER"), config.Config("DB_PASSWORD"), config.Config("DB_NAME"))
 	// Connect to the DB and initialize the DB variable
 	DB, err = gorm.Open(postgres.Open(dsn))
 
