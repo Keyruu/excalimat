@@ -20,7 +20,11 @@ func SetupRoutes(app *fiber.App) {
 	pin.Post("/set", handler.SetPIN)
 
 	account := v1.Group("/account")
-	account.Post("/create", handler.CreateAccount)
+	account.Post("/", handler.CreateAccount)
+
+	product := v1.Group("/product")
+	product.Get("/", handler.GetAllProducts)
+	product.Post("/", handler.CreateProduct)
 
 	// User
 	// user := api.Group("/user")
