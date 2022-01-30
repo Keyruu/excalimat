@@ -1,9 +1,18 @@
 package handler
 
 import (
+	"log"
+	"math/rand"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/keyruu/excalimat-backend/database"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type PinInput struct {
+	AccountID uint   `json:"account_id"`
+	PIN       string `json:"pin"`
+}
 
 // CheckPasswordHash compare password with hash
 func CheckHash(password, hash string) bool {
@@ -11,23 +20,59 @@ func CheckHash(password, hash string) bool {
 	return err == nil
 }
 
+const letterBytes = "1234567890"
+
+func RandomPIN() string {
+	b := make([]byte, 4)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func SetPIN(c *fiber.Ctx) error {
+	db := database.DB
+
+	var input PinInput
+
+	err := parseBody(&input, c)
+	if err != nil {
+		return err
+	}
+
+	account, err := getAccountByID(input.AccountID)
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Couldn't get account from database", "data": err})
+	}
+
+	hashedPin, err := bcrypt.GenerateFromPassword([]byte(input.PIN), bcrypt.DefaultCost)
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	account.PIN = string(hashedPin)
+
+	db.Save(&account)
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // Login get user and password
 func Login(c *fiber.Ctx) error {
-	type LoginInput struct {
-		AccountID string `json:"account_id"`
-		PIN       string `json:"pin"`
-	}
-	var input LoginInput
+	var input PinInput
 
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Error on login request", "data": err})
+	err := parseBody(&input, c)
+	if err != nil {
+		return err
 	}
 	accountId := input.AccountID
 	pin := input.PIN
 
 	account, err := getAccountByID(accountId)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Error on email", "data": err})
+		log.Println(err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Couldn't get account from database", "data": err})
 	}
 
 	if !CheckHash(pin, account.PIN) {
@@ -39,7 +84,9 @@ func Login(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
+	defer session.Save()
+
 	session.Set("user_id", account.ID)
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Success login", "data": account})
+	return c.JSON(fiber.Map{"status": "success", "message": "Login was successful", "data": account})
 }

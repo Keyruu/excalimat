@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/keyruu/excalimat-backend/handler"
 )
 
 func SetupRoutes(app *fiber.App) {
@@ -14,20 +15,24 @@ func SetupRoutes(app *fiber.App) {
 	})
 
 	// Auth
-	auth := api.Group("/pin")
-	auth.Post("/login", handler.Login)
+	pin := v1.Group("/pin")
+	pin.Post("/login", handler.Login)
+	pin.Post("/set", handler.SetPIN)
+
+	account := v1.Group("/account")
+	account.Post("/create", handler.CreateAccount)
 
 	// User
-	user := api.Group("/user")
-	user.Get("/:id", handler.GetUser)
-	user.Post("/", handler.CreateUser)
-	user.Patch("/:id", middleware.Protected(), handler.UpdateUser)
-	user.Delete("/:id", middleware.Protected(), handler.DeleteUser)
+	// user := api.Group("/user")
+	// user.Get("/:id", handler.GetUser)
+	// user.Post("/", handler.CreateUser)
+	// user.Patch("/:id", middleware.Protected(), handler.UpdateUser)
+	// user.Delete("/:id", middleware.Protected(), handler.DeleteUser)
 
-	// Product
-	product := api.Group("/product")
-	product.Get("/", handler.GetAllProducts)
-	product.Get("/:id", handler.GetProduct)
-	product.Post("/", middleware.Protected(), handler.CreateProduct)
-	product.Delete("/:id", middleware.Protected(), handler.DeleteProduct)
+	// // Product
+	// product := api.Group("/product")
+	// product.Get("/", handler.GetAllProducts)
+	// product.Get("/:id", handler.GetProduct)
+	// product.Post("/", middleware.Protected(), handler.CreateProduct)
+	// product.Delete("/:id", middleware.Protected(), handler.DeleteProduct)
 }
