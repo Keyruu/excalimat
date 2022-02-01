@@ -6,7 +6,7 @@ services:
     ports:
       - 3000:3000
     env_file:
-      - .env-dev
+      - .env
     tty: true
     volumes:
       - ../../:/live-reload/
@@ -21,4 +21,4 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     env_file:
-      - .env-dev
+      - .env

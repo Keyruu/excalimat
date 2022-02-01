@@ -20,6 +20,8 @@ func GetAllProducts(c *fiber.Ctx) error {
 }
 
 func CreateProduct(c *fiber.Ctx) error {
+	AdminCheck(c)
+
 	db := database.DB
 	var product model.Product
 

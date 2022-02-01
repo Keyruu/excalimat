@@ -9,7 +9,9 @@ import (
 
 func main() {
 	// Start a new fiber app
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ReadBufferSize: 8192,
+	})
 
 	database.Connect()
 	database.DB.AutoMigrate(&model.Account{}, &model.Product{}, &model.Purchase{})
