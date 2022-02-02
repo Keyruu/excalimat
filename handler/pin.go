@@ -6,13 +6,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/keyruu/excalimat-backend/database"
+	"github.com/keyruu/excalimat-backend/sessions"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type PinInput struct {
-	AccountID uint   `json:"account_id"`
-	PIN       string `json:"pin"`
-}
+const SessionUserId = "user_id"
 
 // CheckPasswordHash compare password with hash
 func CheckHash(password, hash string) bool {
@@ -31,19 +29,22 @@ func RandomPIN() string {
 }
 
 func SetPIN(c *fiber.Ctx) error {
+	type PinInput struct {
+		PIN string `json:"pin"`
+	}
+
 	db := database.DB
+
+	account, err := CurrentAccount(c)
+	if err != nil || account == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorJSON("Couldn't get account from database", err))
+	}
 
 	var input PinInput
 
-	err := parseBody(&input, c)
+	err = parseBody(&input, c)
 	if err != nil {
 		return err
-	}
-
-	account, err := getAccountByID(input.AccountID)
-	if err != nil {
-		log.Println(err)
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Couldn't get account from database", "data": err})
 	}
 
 	hashedPin, err := bcrypt.GenerateFromPassword([]byte(input.PIN), bcrypt.DefaultCost)
@@ -60,7 +61,12 @@ func SetPIN(c *fiber.Ctx) error {
 
 // Login get user and password
 func Login(c *fiber.Ctx) error {
-	var input PinInput
+	type LoginInput struct {
+		AccountID uint   `json:"account_id"`
+		PIN       string `json:"pin"`
+	}
+
+	var input LoginInput
 
 	err := parseBody(&input, c)
 	if err != nil {
@@ -72,21 +78,21 @@ func Login(c *fiber.Ctx) error {
 	account, err := getAccountByID(accountId)
 	if err != nil {
 		log.Println(err)
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Couldn't get account from database", "data": err})
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorJSON("Couldn't get account from database", err))
 	}
 
 	if !CheckHash(pin, account.PIN) {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Invalid password", "data": nil})
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorJSON("Invalid password", nil))
 	}
 
-	session, err := sessionStore.Get(c)
+	session, err := sessions.Store.Get(c)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
 	defer session.Save()
 
-	session.Set("user_id", account.ID)
+	session.Set(SessionUserId, account.ID)
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Login was successful", "data": account})
+	return c.JSON(SuccessJSON("Login was successful", account))
 }

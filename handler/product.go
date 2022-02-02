@@ -16,12 +16,10 @@ func GetAllProducts(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "Found products", "data": products})
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Found products", products))
 }
 
 func CreateProduct(c *fiber.Ctx) error {
-	AdminCheck(c)
-
 	db := database.DB
 	var product model.Product
 
@@ -35,5 +33,5 @@ func CreateProduct(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "message": "Created product", "data": product})
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Created product", product))
 }

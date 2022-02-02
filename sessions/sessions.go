@@ -1,4 +1,4 @@
-package handler
+package sessions
 
 import (
 	"time"
@@ -6,6 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
-var sessionStore = session.New(session.Config{
+var Store = session.New(session.Config{
 	Expiration: 1 * time.Hour,
 })

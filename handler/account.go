@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
 	"golang.org/x/crypto/bcrypt"
@@ -27,12 +28,12 @@ func CreateAccount(c *fiber.Ctx) error {
 	var input model.Account
 
 	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Error on login request", "data": err})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorJSON("Error on login request", err))
 	}
 
 	hashedPin, err := bcrypt.GenerateFromPassword([]byte(RandomPIN()), bcrypt.DefaultCost)
 	if err != nil {
-		c.SendStatus(fiber.StatusInternalServerError)
+		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
 	input.PIN = string(hashedPin)
@@ -43,5 +44,29 @@ func CreateAccount(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "message": "Created Account", "data": &input})
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Created Account", &input))
+}
+
+func SignUp(c *fiber.Ctx) error {
+	db := database.DB
+
+	token := c.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+
+	extId := claims["oid"].(string)
+	email := claims["email"].(string)
+	name := claims["name"].(string)
+	pin := RandomPIN()
+	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	log.Println("The PIN is ", pin)
+
+	account := model.Account{ExtID: extId, Email: email, Name: name, Balance: 0, PIN: string(hash)}
+
+	db.Create(&account)
+
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Account created", &account))
 }
