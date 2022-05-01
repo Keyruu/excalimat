@@ -27,7 +27,8 @@ func getAccountByID(id uint) (*model.Account, error) {
 func CreateAccount(c *fiber.Ctx) error {
 	var input model.Account
 
-	if err := c.BodyParser(&input); err != nil {
+	err := parseBody(&input, c)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorJSON("Error on login request", err))
 	}
 
@@ -45,6 +46,43 @@ func CreateAccount(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Created Account", &input))
+}
+
+func GetAllAccounts(c *fiber.Ctx) error {
+	db := database.DB
+	var accounts []model.Account
+
+	result := db.Find(&accounts)
+
+	if result.Error != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Found products", accounts))
+}
+
+func GetAccount(c *fiber.Ctx) error {
+	id := c.Params("id")
+	db := database.DB
+
+	var account model.Account
+	db.Find(&account, id)
+	if account.Name == "" {
+		return c.Status(404).JSON(ErrorJSON("No user found with ID", nil))
+	}
+	return c.JSON(SuccessJSON("Product found", account))
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	db := database.DB
+
+	var account model.Account
+
+	db.First(&account, id)
+
+	db.Delete(&account)
+	return c.JSON(SuccessJSON("User successfully deleted", nil))
 }
 
 func SignUp(c *fiber.Ctx) error {
