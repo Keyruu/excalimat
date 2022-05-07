@@ -11,7 +11,7 @@ func SetupRoutes(app *fiber.App) {
 	// Middleware
 	api := app.Group("/api")
 	v1 := api.Group("/v1", logger.New())
-	v1.Get("/", middleware.AuthRequired(), middleware.IsAdmin, func(c *fiber.Ctx) error {
+	v1.Get("/", middleware.AuthRequired(), func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "success", "message": "Guten Abend. Dubinski.", "data": nil})
 	})
 
@@ -21,7 +21,10 @@ func SetupRoutes(app *fiber.App) {
 	pin.Post("/set", middleware.AuthRequired(), handler.SetPIN)
 
 	account := v1.Group("/account")
+	account.Get("/", handler.GetAllAccounts)
 	account.Post("/", handler.CreateAccount)
+	account.Patch("/:id", middleware.AuthRequired(), middleware.IsAdmin, handler.UpdateAccount)
+	account.Delete("/:id", middleware.AuthRequired(), middleware.IsAdmin, handler.DeleteAccount)
 	account.Post("/signup", middleware.AuthRequired(), middleware.IsUser, handler.SignUp)
 
 	product := v1.Group("/product")

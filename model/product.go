@@ -3,11 +3,11 @@ package model
 import "gorm.io/gorm"
 
 type Product struct {
-	gorm.Model
-	Name       string  `json:"name"`
-	Picture    string  `json:"picture"`
-	Price      float32 `json:"price"`
-	BundleSize int8    `json:"bundleSize"`
-	Type       string  `json:"type"`
-	Archived   bool    `json:"archived"`
+	gorm.Model `valid:"-"`
+	Name       string  `json:"name" valid:"required"`
+	Picture    string  `json:"picture" valid:"required"`
+	Price      float32 `json:"price" valid:"required"`
+	BundleSize int8    `json:"bundleSize" valid:"required"`
+	Type       string  `json:"type" valid:"required"`
+	Archived   bool    `json:"archived" valid:"required"`
 }

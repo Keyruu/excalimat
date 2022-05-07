@@ -18,7 +18,7 @@ func MakePurchase(c *fiber.Ctx) error {
 
 	err := parseBody(&purchases, c)
 	if err != nil {
-		return c.SendStatus(fiber.StatusBadRequest)
+		return badRequest(err, c)
 	}
 
 	db := database.DB

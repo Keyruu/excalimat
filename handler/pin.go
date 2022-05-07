@@ -28,11 +28,11 @@ func RandomPIN() string {
 	return string(b)
 }
 
-func SetPIN(c *fiber.Ctx) error {
-	type PinInput struct {
-		PIN string `json:"pin"`
-	}
+type PinInput struct {
+	PIN string `json:"pin" valid:"required"`
+}
 
+func SetPIN(c *fiber.Ctx) error {
 	db := database.DB
 
 	account, err := CurrentAccount(c)
@@ -44,7 +44,7 @@ func SetPIN(c *fiber.Ctx) error {
 
 	err = parseBody(&input, c)
 	if err != nil {
-		return err
+		return badRequest(err, c)
 	}
 
 	hashedPin, err := bcrypt.GenerateFromPassword([]byte(input.PIN), bcrypt.DefaultCost)
@@ -62,15 +62,15 @@ func SetPIN(c *fiber.Ctx) error {
 // Login get user and password
 func Login(c *fiber.Ctx) error {
 	type LoginInput struct {
-		AccountID uint   `json:"account_id"`
-		PIN       string `json:"pin"`
+		AccountID uint   `json:"account_id" valid:"required"`
+		PIN       string `json:"pin" valid:"required"`
 	}
 
 	var input LoginInput
 
 	err := parseBody(&input, c)
 	if err != nil {
-		return err
+		return badRequest(err, c)
 	}
 	accountId := input.AccountID
 	pin := input.PIN

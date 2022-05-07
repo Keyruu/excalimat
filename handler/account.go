@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/database"
@@ -29,7 +30,7 @@ func CreateAccount(c *fiber.Ctx) error {
 
 	err := parseBody(&input, c)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorJSON("Error on login request", err))
+		return badRequest(err, c)
 	}
 
 	hashedPin, err := bcrypt.GenerateFromPassword([]byte(RandomPIN()), bcrypt.DefaultCost)
@@ -73,7 +74,40 @@ func GetAccount(c *fiber.Ctx) error {
 	return c.JSON(SuccessJSON("Product found", account))
 }
 
-func DeleteUser(c *fiber.Ctx) error {
+func UpdateAccount(c *fiber.Ctx) error {
+	db := database.DB
+	var oldAccount model.Account
+	var account model.Account
+
+	err := parseBody(&account, c)
+	if err != nil {
+		return badRequest(err, c)
+	}
+
+	result := db.Where("id = ?", c.Params("id")).Find(&oldAccount)
+	if result.Error != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	if _, err := govalidator.ValidateStruct(oldAccount); err != nil {
+		return c.Status(404).JSON(ErrorJSON("Account does not exist", nil))
+	}
+
+	oldAccount.Email = account.Email
+	oldAccount.ExtID = account.ExtID
+	oldAccount.Balance = account.Balance
+	oldAccount.Name = account.Name
+	oldAccount.Picture = account.Picture
+
+	result = db.Save(&oldAccount)
+	if result.Error != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Updated account", oldAccount))
+}
+
+func DeleteAccount(c *fiber.Ctx) error {
 	id := c.Params("id")
 	db := database.DB
 
@@ -86,21 +120,36 @@ func DeleteUser(c *fiber.Ctx) error {
 }
 
 func SignUp(c *fiber.Ctx) error {
+	var input PinInput
+
+	err := parseBody(&input, c)
+	if err != nil {
+		return badRequest(err, c)
+	}
+
 	db := database.DB
 
 	token := c.Locals("user").(*jwt.Token)
 	claims := token.Claims.(jwt.MapClaims)
 
 	extId := claims["oid"].(string)
+
+	var exists bool
+	db.Model(model.Account{}).
+		Select("count(*) > 0").
+		Where("ext_id = ?", extId).
+		Find(&exists)
+
+	if exists {
+		return c.Status(fiber.StatusConflict).JSON(ErrorJSON("This account already exists", nil))
+	}
+
 	email := claims["email"].(string)
 	name := claims["name"].(string)
-	pin := RandomPIN()
-	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.PIN), bcrypt.DefaultCost)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-
-	log.Println("The PIN is ", pin)
 
 	account := model.Account{ExtID: extId, Email: email, Name: name, Balance: 0, PIN: string(hash)}
 

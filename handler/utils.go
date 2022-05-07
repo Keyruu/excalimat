@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/asaskevich/govalidator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/database"
@@ -10,9 +11,17 @@ import (
 
 func parseBody(input interface{}, c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Error on parsing body", "data": err})
+		return err
+	}
+
+	if _, err := govalidator.ValidateStruct(input); err != nil {
+		return err
 	}
 	return nil
+}
+
+func badRequest(err error, c *fiber.Ctx) error {
+	return c.Status(400).JSON(ErrorJSON(err.Error(), nil))
 }
 
 func CurrentAccount(c *fiber.Ctx) (*model.Account, error) {
@@ -53,5 +62,5 @@ func SuccessJSON(message string, data interface{}) fiber.Map {
 }
 
 func ErrorJSON(message string, data interface{}) fiber.Map {
-	return fiber.Map{"status": "success", "message": message, "data": data}
+	return fiber.Map{"status": "error", "message": message, "data": data}
 }

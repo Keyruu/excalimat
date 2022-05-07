@@ -1,17 +1,17 @@
 services:
-  excalimat-backend-live-reload:
-    image: cosmtrek/air
-    # working_dir value has to be the same of mapped volume
-    working_dir: /live-reload/
-    ports:
-      - 3000:3000
-    env_file:
-      - .env
-    tty: true
-    volumes:
-      - ../../:/live-reload/
-    depends_on:
-      - postgres
+  # excalimat-backend-lr:
+  #   image: acim/go-reflex
+  #   volumes:
+  #     - ../../:/app
+  #   ports:
+  #     - 3000:3000
+  #   tty: true
+  #   environment:
+  #     - RACE_DETECTOR=1
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - postgres
   postgres:
     image: postgres
     ports:

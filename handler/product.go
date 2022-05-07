@@ -49,6 +49,31 @@ func CreateProduct(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Created product", product))
 }
 
+func UpdateProduct(c *fiber.Ctx) error {
+	db := database.DB
+	var oldProduct model.Product
+	var product model.Product
+
+	err := parseBody(&product, c)
+	if err != nil {
+		return err
+	}
+
+	result := db.Where("id = ?", product.ID).Find(&oldProduct)
+	if result.Error != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	oldProduct = product
+
+	result = db.Save(&oldProduct)
+	if result.Error != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Updated product", product))
+}
+
 func DeleteProduct(c *fiber.Ctx) error {
 	id := c.Params("id")
 	db := database.DB

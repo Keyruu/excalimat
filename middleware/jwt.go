@@ -22,14 +22,14 @@ func IsAdmin(c *fiber.Ctx) error {
 	if !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(handler.ErrorJSON("User is not in the Admin Group", nil))
 	}
-	return nil
+	return c.Next()
 }
 
 func IsUser(c *fiber.Ctx) error {
 	if !isUser(c) {
 		return c.Status(fiber.StatusForbidden).JSON(handler.ErrorJSON("User is not in the User Group", nil))
 	}
-	return nil
+	return c.Next()
 }
 
 func usesSession(c *fiber.Ctx) bool {
@@ -60,6 +60,10 @@ func isUser(c *fiber.Ctx) bool {
 func isGroup(group string, c *fiber.Ctx) bool {
 	token := c.Locals("user").(*jwt.Token)
 	claims := token.Claims.(jwt.MapClaims)
+
+	if claims["groups"] == nil {
+		return false
+	}
 
 	groups := claims["groups"].([]interface{})
 	for _, adGroup := range groups {
