@@ -3,11 +3,10 @@ package model
 import "gorm.io/gorm"
 
 type Purchase struct {
-	gorm.Model `valid:"-"`
-	AccountID  uint    `json:"-" valid:"required"`
-	Account    Account `json:"account" valid:"-"`
-	ProductID  uint    `json:"-" valid:"required"`
-	Product    Product `json:"product" valid:"-"`
-	PaidPrice  float32 `json:"paidPrice" valid:"required"`
-	Refunded   bool    `json:"refunded" valid:"required"`
+	gorm.Model
+	AccountID uint    `json:"accountId" validate:"required"`
+	Account   Account `json:"account" validate:"dive"`
+	ProductID uint    `json:"productId" validate:"required"`
+	Product   Product `json:"product" validate:"dive"`
+	PaidPrice float32 `json:"paidPrice" validate:"required" gorm:"type:decimal(9,2);"`
 }

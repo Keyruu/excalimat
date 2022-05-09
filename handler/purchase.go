@@ -2,6 +2,7 @@ package handler
 
 import (
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/keyruu/excalimat-backend/database"
@@ -10,16 +11,18 @@ import (
 )
 
 func MakePurchase(c *fiber.Ctx) error {
-	type PurchaseInput struct {
-		products []model.Product
+	type ProductInput struct {
+		ProductIds []uint `json:"productIds" validate:"required,min=1"`
 	}
 
-	var purchases PurchaseInput
+	var input ProductInput
 
-	err := parseBody(&purchases, c)
+	err := parseBody(&input, c)
 	if err != nil {
 		return badRequest(err, c)
 	}
+
+	log.Println(input)
 
 	db := database.DB
 
@@ -28,9 +31,16 @@ func MakePurchase(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
+	var purchases []model.Purchase
 	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, product := range purchases.products {
-			purchase := model.Purchase{AccountID: account.ID, ProductID: product.ID, PaidPrice: product.Price}
+		for _, id := range input.ProductIds {
+			var product model.Product
+
+			if err := tx.First(&product, id).Error; err != nil {
+				return err
+			}
+
+			purchase := model.Purchase{Account: *account, Product: product, PaidPrice: product.Price}
 
 			if err := tx.Create(&purchase).Error; err != nil {
 				// return any error will rollback
@@ -41,6 +51,8 @@ func MakePurchase(c *fiber.Ctx) error {
 			if err := tx.Save(&account).Error; err != nil {
 				return err
 			}
+
+			purchases = append(purchases, purchase)
 		}
 
 		// return nil will commit the whole transaction
@@ -51,14 +63,14 @@ func MakePurchase(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Made purchase", purchases))
 }
 
 func GetAllPurchases(c *fiber.Ctx) error {
 	db := database.DB
 	var purchases []model.Purchase
 
-	result := db.Find(&purchases)
+	result := db.Preload("Account").Preload("Product").Find(&purchases)
 
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -73,7 +85,7 @@ func GetPurchase(c *fiber.Ctx) error {
 
 	var purchase model.Purchase
 
-	result := db.Find(&purchase, id)
+	result := db.Preload("Account").Preload("Product").Find(&purchase, id)
 
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -89,9 +101,9 @@ func GetMyPurchases(c *fiber.Ctx) error {
 	}
 
 	db := database.DB
-	var purchases []model.Account
+	var purchases []model.Purchase
 
-	result := db.Where("account_id = ?", account.ID).Find(&purchases)
+	result := db.Where("account_id = ?", account.ID).Preload("Account").Preload("Product").Find(&purchases)
 
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -100,13 +112,35 @@ func GetMyPurchases(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Found purchases", purchases))
 }
 
-func RefundPurchase(c *fiber.Ctx) error {
-	account, err := CurrentAccount(c)
-	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+func DeletePurchase(c *fiber.Ctx) error {
+	id := c.Params("id")
+	db := database.DB
+
+	var purchase model.Purchase
+
+	if err := db.First(&purchase, id).Error; err != nil {
+		return c.Status(404).JSON(ErrorJSON("No product found", err))
 	}
 
-	log.Println(account.ID)
+	threshhold := purchase.CreatedAt.Add(time.Duration(5) * time.Minute)
+	if time.Now().Before(threshhold) || IsAdmin(c) {
+		err := db.Transaction(func(tx *gorm.DB) error {
+			purchase.Account.Balance += purchase.PaidPrice
 
-	return nil
+			if err := tx.Save(&purchase.Account).Error; err != nil {
+				return err
+			}
+			if err := tx.Delete(&purchase).Error; err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	} else {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorJSON("Not allowed to refund after 5 minutes", nil))
+	}
+
+	return c.JSON(SuccessJSON("Purchase successfully deleted", purchase))
 }

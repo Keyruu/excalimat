@@ -29,7 +29,7 @@ func RandomPIN() string {
 }
 
 type PinInput struct {
-	PIN string `json:"pin" valid:"required"`
+	PIN string `json:"pin" validate:"required"`
 }
 
 func SetPIN(c *fiber.Ctx) error {
@@ -62,8 +62,8 @@ func SetPIN(c *fiber.Ctx) error {
 // Login get user and password
 func Login(c *fiber.Ctx) error {
 	type LoginInput struct {
-		AccountID uint   `json:"account_id" valid:"required"`
-		PIN       string `json:"pin" valid:"required"`
+		AccountID uint   `json:"account_id" validate:"required"`
+		PIN       string `json:"pin" validate:"required"`
 	}
 
 	var input LoginInput

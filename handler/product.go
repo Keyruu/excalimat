@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
+	"github.com/keyruu/excalimat-backend/validation"
 )
 
 func GetAllProducts(c *fiber.Ctx) error {
@@ -56,22 +57,30 @@ func UpdateProduct(c *fiber.Ctx) error {
 
 	err := parseBody(&product, c)
 	if err != nil {
-		return err
+		return badRequest(err, c)
 	}
 
-	result := db.Where("id = ?", product.ID).Find(&oldProduct)
+	result := db.Where("id = ?", c.Params("id")).Find(&oldProduct)
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	oldProduct = product
+	if err := validation.Validate.Struct(oldProduct); err != nil {
+		return c.Status(404).JSON(ErrorJSON("Product does not exist", nil))
+	}
+
+	oldProduct.Price = product.Price
+	oldProduct.BundleSize = product.BundleSize
+	oldProduct.Type = product.Type
+	oldProduct.Name = product.Name
+	oldProduct.Picture = product.Picture
 
 	result = db.Save(&oldProduct)
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Updated product", product))
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Updated product", oldProduct))
 }
 
 func DeleteProduct(c *fiber.Ctx) error {
@@ -80,10 +89,9 @@ func DeleteProduct(c *fiber.Ctx) error {
 
 	var product model.Product
 	db.First(&product, id)
-	if product.Name == "" {
-		return c.Status(404).JSON(ErrorJSON("No product found with ID", nil))
-
+	if err := validation.Validate.Struct(product); err != nil {
+		return c.Status(404).JSON(ErrorJSON("No product found", nil))
 	}
 	db.Delete(&product)
-	return c.JSON(SuccessJSON("Product successfully deleted", nil))
+	return c.JSON(SuccessJSON("Product successfully deleted", product))
 }

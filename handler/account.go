@@ -4,11 +4,11 @@ import (
 	"errors"
 	"log"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
+	"github.com/keyruu/excalimat-backend/validation"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -59,7 +59,7 @@ func GetAllAccounts(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Found products", accounts))
+	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Found accounts", accounts))
 }
 
 func GetAccount(c *fiber.Ctx) error {
@@ -89,8 +89,8 @@ func UpdateAccount(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	if _, err := govalidator.ValidateStruct(oldAccount); err != nil {
-		return c.Status(404).JSON(ErrorJSON("Account does not exist", nil))
+	if err := validation.Validate.Struct(oldAccount); err != nil {
+		return c.Status(404).JSON(ErrorJSON("Account does not exist", oldAccount))
 	}
 
 	oldAccount.Email = account.Email

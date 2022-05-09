@@ -1,12 +1,15 @@
 package handler
 
 import (
-	"github.com/asaskevich/govalidator"
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/keyruu/excalimat-backend/config"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
 	"github.com/keyruu/excalimat-backend/sessions"
+	"github.com/keyruu/excalimat-backend/validation"
 )
 
 func parseBody(input interface{}, c *fiber.Ctx) error {
@@ -14,7 +17,8 @@ func parseBody(input interface{}, c *fiber.Ctx) error {
 		return err
 	}
 
-	if _, err := govalidator.ValidateStruct(input); err != nil {
+	if err := validation.Validate.Struct(input); err != nil {
+		log.Println("validation error")
 		return err
 	}
 	return nil
@@ -63,4 +67,29 @@ func SuccessJSON(message string, data interface{}) fiber.Map {
 
 func ErrorJSON(message string, data interface{}) fiber.Map {
 	return fiber.Map{"status": "error", "message": message, "data": data}
+}
+
+func IsAdmin(c *fiber.Ctx) bool {
+	return isGroup(config.AdminGroup, c)
+}
+
+func IsUser(c *fiber.Ctx) bool {
+	return isGroup(config.UserGroup, c)
+}
+
+func isGroup(group string, c *fiber.Ctx) bool {
+	token := c.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+
+	if claims["groups"] == nil {
+		return false
+	}
+
+	groups := claims["groups"].([]interface{})
+	for _, adGroup := range groups {
+		if adGroup.(string) == group {
+			return true
+		}
+	}
+	return false
 }

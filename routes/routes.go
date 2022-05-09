@@ -22,14 +22,25 @@ func SetupRoutes(app *fiber.App) {
 
 	account := v1.Group("/account")
 	account.Get("/", handler.GetAllAccounts)
+	account.Get("/:id", handler.GetAccount)
 	account.Post("/", handler.CreateAccount)
-	account.Patch("/:id", middleware.AuthRequired(), middleware.IsAdmin, handler.UpdateAccount)
-	account.Delete("/:id", middleware.AuthRequired(), middleware.IsAdmin, handler.DeleteAccount)
-	account.Post("/signup", middleware.AuthRequired(), middleware.IsUser, handler.SignUp)
+	account.Patch("/:id", middleware.AuthRequired(), middleware.AdminCheck, handler.UpdateAccount)
+	account.Delete("/:id", middleware.AuthRequired(), middleware.AdminCheck, handler.DeleteAccount)
+	account.Post("/signup", middleware.AuthRequired(), middleware.UserCheck, handler.SignUp)
 
 	product := v1.Group("/product")
 	product.Get("/", handler.GetAllProducts)
-	product.Post("/", middleware.AuthRequired(), middleware.IsAdmin, handler.CreateProduct)
+	product.Get("/:id", handler.GetProduct)
+	product.Post("/", middleware.AuthRequired(), middleware.AdminCheck, handler.CreateProduct)
+	product.Patch("/:id", middleware.AuthRequired(), middleware.AdminCheck, handler.UpdateProduct)
+	product.Delete("/:id", middleware.AuthRequired(), middleware.AdminCheck, handler.DeleteProduct)
+
+	purchase := v1.Group("/purchase")
+	purchase.Get("/", middleware.AuthRequired(), middleware.AdminCheck, handler.GetAllPurchases)
+	purchase.Get("/me", middleware.AuthRequired(), handler.GetMyPurchases)
+	purchase.Get("/:id", middleware.AuthRequired(), middleware.AdminCheck, handler.GetPurchase)
+	purchase.Post("/", middleware.AuthRequired(), handler.MakePurchase)
+	purchase.Delete("/:id", middleware.AuthRequired(), handler.DeletePurchase)
 
 	// // User
 	// user := api.Group("/user")

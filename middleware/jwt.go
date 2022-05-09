@@ -3,7 +3,6 @@ package middleware
 import (
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/config"
 	"github.com/keyruu/excalimat-backend/handler"
 	"github.com/keyruu/excalimat-backend/sessions"
@@ -18,15 +17,15 @@ func AuthRequired() fiber.Handler {
 	})
 }
 
-func IsAdmin(c *fiber.Ctx) error {
-	if !isAdmin(c) {
+func AdminCheck(c *fiber.Ctx) error {
+	if !handler.IsAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(handler.ErrorJSON("User is not in the Admin Group", nil))
 	}
 	return c.Next()
 }
 
-func IsUser(c *fiber.Ctx) error {
-	if !isUser(c) {
+func UserCheck(c *fiber.Ctx) error {
+	if !handler.IsUser(c) {
 		return c.Status(fiber.StatusForbidden).JSON(handler.ErrorJSON("User is not in the User Group", nil))
 	}
 	return c.Next()
@@ -47,29 +46,4 @@ func jwtError(c *fiber.Ctx, err error) error {
 	}
 	return c.Status(fiber.StatusUnauthorized).
 		JSON(handler.ErrorJSON("Invalid or expired JWT", nil))
-}
-
-func isAdmin(c *fiber.Ctx) bool {
-	return isGroup(config.AdminGroup, c)
-}
-
-func isUser(c *fiber.Ctx) bool {
-	return isGroup(config.UserGroup, c)
-}
-
-func isGroup(group string, c *fiber.Ctx) bool {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["groups"] == nil {
-		return false
-	}
-
-	groups := claims["groups"].([]interface{})
-	for _, adGroup := range groups {
-		if adGroup.(string) == group {
-			return true
-		}
-	}
-	return false
 }
