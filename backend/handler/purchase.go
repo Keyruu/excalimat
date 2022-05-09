@@ -103,7 +103,7 @@ func GetMyPurchases(c *fiber.Ctx) error {
 	db := database.DB
 	var purchases []model.Purchase
 
-	result := db.Where("account_id = ?", account.ID).Preload("Account").Preload("Product").Find(&purchases)
+	result := db.Where("account_id = ?", account.ID).Preload("Product").Find(&purchases)
 
 	if result.Error != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)

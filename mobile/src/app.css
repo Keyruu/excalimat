@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Ropa+Sans&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+	font-family: 'Ropa Sans', sans-serif;
+}
+
+button {
+	text-transform: none !important;
+}
