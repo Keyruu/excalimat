@@ -58,7 +58,7 @@ func UploadAccountImage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't get current account", err.Error()))
 	}
 
-	if fmt.Sprint(currentAccount.ID) != c.Params("id") || !IsAdmin(c) {
+	if fmt.Sprint(currentAccount.ID) != c.Params("id") && !IsAdmin(c) {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
