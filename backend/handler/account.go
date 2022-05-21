@@ -2,12 +2,14 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
+	"github.com/keyruu/excalimat-backend/storage"
 	"github.com/keyruu/excalimat-backend/validation"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -47,6 +49,49 @@ func CreateAccount(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Created Account", &input))
+}
+
+func UploadAccountImage(c *fiber.Ctx) error {
+	db := database.DB
+	currentAccount, err := CurrentAccount(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't get current account", err.Error()))
+	}
+
+	if fmt.Sprint(currentAccount.ID) != c.Params("id") || !IsAdmin(c) {
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	var account *model.Account
+	if fmt.Sprint(currentAccount.ID) == c.Params("id") {
+		account = currentAccount
+	} else {
+		if err := db.Find(&account, c.Params("id")).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(ErrorJSON("Account was not found", err.Error()))
+		}
+	}
+
+	// Get first file from form field "document":
+	imagePath, err := uploadFile("account", c)
+	if err != nil {
+		return nil
+	}
+
+	if account.Picture != "" {
+		err = storage.S3.Delete(account.Picture)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't delete old image", err.Error()))
+		}
+	}
+
+	account.Picture = imagePath
+
+	err = db.Save(account).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't save account", err.Error()))
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Uploaded image", "/image/"+imagePath))
 }
 
 func GetAllAccounts(c *fiber.Ctx) error {

@@ -6,6 +6,7 @@ import (
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
 	"github.com/keyruu/excalimat-backend/routes"
+	"github.com/keyruu/excalimat-backend/storage"
 	"github.com/keyruu/excalimat-backend/validation"
 )
 
@@ -16,6 +17,8 @@ func main() {
 	})
 
 	validation.InitValidation()
+
+	storage.InitStorage()
 
 	database.Connect()
 	database.DB.AutoMigrate(&model.Account{}, &model.Product{}, &model.Purchase{})
