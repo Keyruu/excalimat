@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/helmet/v2"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
@@ -27,6 +28,8 @@ func main() {
 	app.Use(
 		helmet.New(), // add Helmet middleware
 	)
+
+	app.Use(cors.New())
 
 	// app.Use(
 	// 	csrf.New(), // add CSRF middleware
