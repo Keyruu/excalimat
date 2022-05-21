@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  apisix:
+    image: apache/apisix:2.13.1-alpine
+    restart: always
+    volumes:
+      - ./apisix_log:/usr/local/apisix/logs
+      - ./config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    network_mode: host
+  excalimat-api:
+    image: excalimat
+    tty: true
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - 3111:3000
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env

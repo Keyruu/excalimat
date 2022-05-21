@@ -1,0 +1,37 @@
+routes:
+  - uri: /
+    upstream:
+      nodes:
+        'host.docker.internal:3000': 1
+      type: roundrobin
+    plugins:
+      cors: {}
+      openid-connect:
+        bearer_only: false
+        client_id: id
+        client_secret: secret
+        discovery: https://login.microsoftonline.com/tenant/v2.0/.well-known/openid-configuration
+        redirect_uri: http://localhost:9080/login/callback
+      serverless-post-function:
+        functions:
+          - "return function(conf, ctx) local core = require(\"apisix.core\"); if core.request.header(ctx, \"X-Userinfo\") then\n core.response.add_header(\"Set-Cookie\", \"userinfo=\" .. core.request.header(ctx, \"X-Userinfo\") .. \";\")\n end; end"
+        phase: rewrite
+  - uri: /login/callback
+    upstream:
+      nodes:
+        'host.docker.internal:3000': 1
+      type: roundrobin
+    plugins:
+      cors: {}
+      openid-connect:
+        bearer_only: false
+        client_id: id
+        client_secret: secret
+        discovery: https://login.microsoftonline.com/tenant/v2.0/.well-known/openid-configuration
+        redirect_uri: http://localhost:9080/login/callback
+  - uri: /*
+    upstream:
+      nodes:
+        'host.docker.internal:3000': 1
+      type: roundrobin
+#END
