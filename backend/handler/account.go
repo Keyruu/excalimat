@@ -18,7 +18,7 @@ import (
 func getAccountByID(id uint) (*model.Account, error) {
 	db := database.DB
 	var account model.Account
-	if err := db.Where("id = ?", id).Find(&account).Error; err != nil {
+	if err := db.First(&account, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -66,7 +66,7 @@ func UploadAccountImage(c *fiber.Ctx) error {
 	if fmt.Sprint(currentAccount.ID) == c.Params("id") {
 		account = currentAccount
 	} else {
-		if err := db.Find(&account, c.Params("id")).Error; err != nil {
+		if err := db.First(&account, c.Params("id")).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(ErrorJSON("Account was not found", err.Error()))
 		}
 	}
@@ -112,9 +112,9 @@ func GetAccount(c *fiber.Ctx) error {
 	db := database.DB
 
 	var account model.Account
-	db.Find(&account, id)
-	if account.Name == "" {
-		return c.Status(404).JSON(ErrorJSON("No user found with ID", nil))
+
+	if err := db.First(&account, id).Error; err != nil {
+		return c.Status(404).JSON(ErrorJSON("No user found with ID", err.Error()))
 	}
 	return c.JSON(SuccessJSON("Product found", account))
 }
@@ -129,8 +129,7 @@ func UpdateAccount(c *fiber.Ctx) error {
 		return badRequest(err, c)
 	}
 
-	result := db.Where("id = ?", c.Params("id")).Find(&oldAccount)
-	if result.Error != nil {
+	if err := db.First(&oldAccount, c.Params("id")).Error; err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
@@ -144,8 +143,7 @@ func UpdateAccount(c *fiber.Ctx) error {
 	oldAccount.Name = account.Name
 	oldAccount.Picture = account.Picture
 
-	result = db.Save(&oldAccount)
-	if result.Error != nil {
+	if err := db.Save(&oldAccount).Error; err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
@@ -183,7 +181,7 @@ func SignUp(c *fiber.Ctx) error {
 	db.Model(model.Account{}).
 		Select("count(*) > 0").
 		Where("ext_id = ?", extId).
-		Find(&exists)
+		First(&exists)
 
 	if exists {
 		return c.Status(fiber.StatusConflict).JSON(ErrorJSON("This account already exists", nil))

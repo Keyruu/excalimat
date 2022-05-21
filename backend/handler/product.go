@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/keyruu/excalimat-backend/database"
 	"github.com/keyruu/excalimat-backend/model"
+	"github.com/keyruu/excalimat-backend/storage"
 	"github.com/keyruu/excalimat-backend/validation"
 )
 
@@ -25,11 +26,10 @@ func GetProduct(c *fiber.Ctx) error {
 	db := database.DB
 
 	var product model.Product
-	db.Find(&product, id)
-	if product.Name == "" {
-		return c.Status(404).JSON(ErrorJSON("No product found with ID", nil))
-
+	if err := db.First(&product, id).Error; err != nil {
+		return c.Status(404).JSON(ErrorJSON("No product found with ID", err))
 	}
+
 	return c.JSON(SuccessJSON("Product found", product))
 }
 
@@ -60,13 +60,12 @@ func UpdateProduct(c *fiber.Ctx) error {
 		return badRequest(err, c)
 	}
 
-	result := db.Where("id = ?", c.Params("id")).Find(&oldProduct)
-	if result.Error != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+	if err := db.First(&oldProduct, c.Params("id")).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't find product", err.Error()))
 	}
 
 	if err := validation.Validate.Struct(oldProduct); err != nil {
-		return c.Status(404).JSON(ErrorJSON("Product does not exist", nil))
+		return c.Status(404).JSON(ErrorJSON("Product does not exist", err.Error()))
 	}
 
 	oldProduct.Price = product.Price
@@ -75,12 +74,42 @@ func UpdateProduct(c *fiber.Ctx) error {
 	oldProduct.Name = product.Name
 	oldProduct.Picture = product.Picture
 
-	result = db.Save(&oldProduct)
-	if result.Error != nil {
+	if err := db.Save(&oldProduct).Error; err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(SuccessJSON("Updated product", oldProduct))
+}
+
+func UploadProductImage(c *fiber.Ctx) error {
+	db := database.DB
+	var product *model.Product
+
+	if err := db.First(&product, c.Params("id")).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(ErrorJSON("Couldn't find product", err.Error()))
+	}
+
+	// Get first file from form field "document":
+	imagePath, err := uploadFile("product", c)
+	if err != nil {
+		return nil
+	}
+
+	if product.Picture != "" {
+		err = storage.S3.Delete(product.Picture)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't delete old image", err.Error()))
+		}
+	}
+
+	product.Picture = imagePath
+
+	err = db.Save(product).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorJSON("Couldn't save account", err.Error()))
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(SuccessJSON("Uploaded image", "/image/"+imagePath))
 }
 
 func DeleteProduct(c *fiber.Ctx) error {

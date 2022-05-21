@@ -85,9 +85,7 @@ func GetPurchase(c *fiber.Ctx) error {
 
 	var purchase model.Purchase
 
-	result := db.Preload("Account").Preload("Product").Find(&purchase, id)
-
-	if result.Error != nil {
+	if err := db.Preload("Account").Preload("Product").First(&purchase, id).Error; err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
