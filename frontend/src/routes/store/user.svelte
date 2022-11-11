@@ -3,7 +3,7 @@
 	import type { Account } from '$lib/types/Account';
 
 	let accounts: Account[] = [];
-	fetch('http://localhost:3000/excalimat/api/v1/account/')
+	fetch(`${import.meta.env.VITE_API_BASE_URL}/excalimat/api/v1/account/`)
 		.then((res) => res.json())
 		.then((json) => (accounts = json.data as Account[]));
 </script>

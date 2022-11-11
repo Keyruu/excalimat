@@ -8,7 +8,7 @@
 	<figure class="px-2 pt-6">
 		<div class="avatar">
 			<div class="w-28 mask mask-squircle">
-				<img src={'http://localhost:3000/excalimat/api/v1/image/' + image} />
+				<img src={'http://172.16.50.28:3000/excalimat/api/v1/image/' + image} />
 			</div>
 		</div>
 	</figure>
